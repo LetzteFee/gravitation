@@ -47,12 +47,13 @@ class Vektor {
   public betrag(): number {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
-  public div(d: number): void {
-    this.x /= d;
-    this.y /= d;
+  public div(d: number): Vektor {
+    return new Vektor(this.x / d, this.y / d);
   }
   public normieren(): void {
-    this.div(this.betrag());
+    let betrag: number = this.betrag();
+    this.x /= betrag;
+    this.y /= betrag;
   }
   public multiply(m: number): void {
     this.x *= m;
@@ -63,67 +64,73 @@ class Vektor {
     this.y += v.y;
   }
 }
-class Koerper {
+class Materie {
   public x: number;
   public y: number;
-  public v: Vektor;
+  public vec_v: Vektor;
+  protected vec_a: Vektor;
   public readonly mass: number;
+  protected vec_F: Vektor;
   constructor(x: number, y: number, mass: number, v: Vektor) {
     this.x = x;
     this.y = y;
-    this.v = v;
+    this.vec_v = v;
+    this.vec_a = Vektor.getNullVektor();
+    this.vec_F = Vektor.getNullVektor();
     this.mass = mass;
   }
   public run(id: number) {
-    this.update(id);
+    this.update_vec_F(id);
+    this.update_vec_a();
+    this.update_vec_v();
     this.move();
   }
   protected move(): void {
-    this.x += this.v.x;
-    this.y += this.v.y;
+    this.x += this.vec_v.x;
+    this.y += this.vec_v.y;
   }
-  protected update(id: number): void {
+  protected update_vec_v(): void {
+    this.vec_v.add(this.vec_a);
+  }
+  protected update_vec_a(): void {
+    this.vec_a = this.vec_F.div(this.mass);
+  }
+  protected update_vec_F(id: number): void {
     if (planeten.length < 2) return;
 
     //Gravitationskonstante; beeinfluust basically die Animationsgeschwindigkeit
-    const G = 0.05;
+    const G: number = 0.005;
 
     let vektoren: Vektor[] = [];
 
-    for (let i = 0; i < planeten.length; i++) {
-      if (i != id) {
-        //Vektor von diesem Planeten zu Planet Nr. i
-        let vec_i_j: Vektor = new Vektor(
-          planeten[i].x - this.x,
-          planeten[i].y - this.y,
-        );
+    for (let i: number = 0; i < planeten.length; i++) {
+      if (i == id) continue;
 
-        //Betrag des Kraftvektors nach Newtons Gravitationsgesetz
-        let F = G * (planeten[i].mass * this.mass) /
-          (vec_i_j.betrag() * vec_i_j.betrag());
+      //Vektor von diesem Planeten zu Planet Nr. i
+      let vec_this_i: Vektor = new Vektor(
+        planeten[i].x - this.x,
+        planeten[i].y - this.y,
+      );
 
-        //Betrag des Beschleunigungsvektors
-        let a = F / this.mass;
+      //Betrag des Kraftvektors nach Newtons Gravitationsgesetz
+      let F: number = G * (planeten[i].mass * this.mass) /
+        (vec_this_i.betrag() * vec_this_i.betrag());
 
-        vec_i_j.normieren();
-        vec_i_j.multiply(a);
-        //Der finale Vektor mit der richtigen Richtung und dem richtigen Betrag
+      //Der finale Vektor mit der richtigen Richtung und dem richtigen Betrag
+      vec_this_i.normieren();
+      vec_this_i.multiply(F);
 
-        vektoren.push(vec_i_j);
-      }
+      vektoren.push(vec_this_i);
     }
 
     //alle Vektoren zum finalen Beschleunigungsvektor addieren
-    let vec_a = vektoren[0];
-    for (let i = 1; i < vektoren.length; i++) {
-      vec_a.add(vektoren[i]);
+    this.vec_F = vektoren[0];
+    for (let i: number = 1; i < vektoren.length; i++) {
+      this.vec_F.add(vektoren[i]);
     }
-
-    //Vektorsumme anwenden bzw. die Beschleunigung mit der Geschindigkeit verrechnen
-    this.v.add(vec_a);
   }
 }
-class Planet extends Koerper {
+class Planet extends Materie {
   public readonly radius: number;
   public readonly farbe: Farbe;
   constructor(
@@ -139,20 +146,31 @@ class Planet extends Koerper {
     this.farbe = farbe;
   }
   public override run(id: number): void {
-    this.update(id);
+    this.update_vec_F(id);
+    this.update_vec_a();
+    this.update_vec_v();
     this.move();
+
     this.render();
   }
-  private render() {
+  private render(): void {
     noStroke();
     this.farbe.executeFill();
     ellipse(this.x, this.y, this.radius * 2);
+  }
+  public render_vec_F(): void {
+    stroke(255);
+    strokeWeight(3);
+    const multiplier: number = 350;
+    let delta_x: number = this.vec_F.x * multiplier;
+    let delta_y: number = this.vec_F.y * multiplier;
+    line(this.x, this.y, this.x + delta_x, this.y + delta_y);
   }
 }
 let planeten: Planet[] = [];
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  for (let i = 0; i < 200; i++) {
+  for (let i: number = 0; i < 200; i++) {
     planeten.push(
       new Planet(
         random(width),
@@ -168,19 +186,25 @@ function setup() {
 
 function draw() {
   background(0);
-  for (let i = 0; i < planeten.length; i++) {
+  for (let i: number = 0; i < planeten.length; i++) {
     planeten[i].run(i);
+  }
+  for (let i: number = 0; i < planeten.length; i++) {
+    planeten[i].render_vec_F();
   }
   checkCollision();
 }
 function checkCollision(): void {
-  for (let i = 0; i < planeten.length; i++) {
-    for (let j = i + 1; j < planeten.length; j++) {
+  for (let i: number = 0; i < planeten.length; i++) {
+    for (let j: number = i + 1; j < planeten.length; j++) {
       let vec_i_j: Vektor = new Vektor(
         planeten[i].x - planeten[j].x,
         planeten[i].y - planeten[j].y,
       );
-      if (vec_i_j.betrag() <= 0.5 * (planeten[i].radius + planeten[j].radius)) {
+      let max_radius: number = planeten[i].radius > planeten[j].radius
+        ? planeten[i].radius
+        : planeten[j].radius;
+      if (vec_i_j.betrag() <= max_radius) {
         let gesamtradius: number = Math.sqrt(
           planeten[i].radius * planeten[i].radius +
             planeten[j].radius * planeten[j].radius,
@@ -189,10 +213,10 @@ function checkCollision(): void {
         let gesamtmasse: number = planeten[i].mass + planeten[j].mass;
 
         let vec_v: Vektor = Vektor.getNullVektor();
-        vec_v.x += planeten[i].v.x * (planeten[i].mass / gesamtmasse);
-        vec_v.x += planeten[j].v.x * (planeten[j].mass / gesamtmasse);
-        vec_v.y += planeten[i].v.y * (planeten[i].mass / gesamtmasse);
-        vec_v.y += planeten[j].v.y * (planeten[j].mass / gesamtmasse);
+        vec_v.x += planeten[i].vec_v.x * (planeten[i].mass / gesamtmasse);
+        vec_v.x += planeten[j].vec_v.x * (planeten[j].mass / gesamtmasse);
+        vec_v.y += planeten[i].vec_v.y * (planeten[i].mass / gesamtmasse);
+        vec_v.y += planeten[j].vec_v.y * (planeten[j].mass / gesamtmasse);
 
         let new_x: number = 0;
         new_x += planeten[i].x * (planeten[i].mass / gesamtmasse);
