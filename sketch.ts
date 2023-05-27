@@ -83,6 +83,8 @@ class Koerper {
     this.y += this.v.y;
   }
   protected update(id: number): void {
+    if (planeten.length < 2) return;
+
     //Gravitationskonstante; beeinfluust basically die Animationsgeschwindigkeit
     const G = 0.05;
 
@@ -112,8 +114,8 @@ class Koerper {
     }
 
     //alle Vektoren zum finalen Beschleunigungsvektor addieren
-    let vec_a = new Vektor(0, 0);
-    for (let i = 0; i < vektoren.length; i++) {
+    let vec_a = vektoren[0];
+    for (let i = 1; i < vektoren.length; i++) {
       vec_a.add(vektoren[i]);
     }
 
@@ -170,9 +172,6 @@ function draw() {
     planeten[i].run(i);
   }
   checkCollision();
-  planeten.sort(function (a: Planet, b: Planet): number {
-    return b.radius - a.radius;
-  });
 }
 function checkCollision(): void {
   for (let i = 0; i < planeten.length; i++) {
@@ -181,7 +180,7 @@ function checkCollision(): void {
         planeten[i].x - planeten[j].x,
         planeten[i].y - planeten[j].y,
       );
-      if (vec_i_j.betrag() < 0.5 * (planeten[i].radius + planeten[j].radius)) {
+      if (vec_i_j.betrag() <= 0.5 * (planeten[i].radius + planeten[j].radius)) {
         let gesamtradius: number = Math.sqrt(
           planeten[i].radius * planeten[i].radius +
             planeten[j].radius * planeten[j].radius,
@@ -223,4 +222,7 @@ function checkCollision(): void {
       }
     }
   }
+  planeten.sort(function (a: Planet, b: Planet): number {
+    return b.radius - a.radius;
+  });
 }
