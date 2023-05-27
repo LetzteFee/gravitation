@@ -133,6 +133,7 @@ class Materie {
 class Planet extends Materie {
   public readonly radius: number;
   public readonly farbe: Farbe;
+  private static readonly render_multiplier: number = 500;
   constructor(
     x: number,
     y: number,
@@ -161,9 +162,8 @@ class Planet extends Materie {
   public render_vec_F(): void {
     stroke(255);
     strokeWeight(3);
-    const multiplier: number = 350;
-    let delta_x: number = this.vec_F.x * multiplier;
-    let delta_y: number = this.vec_F.y * multiplier;
+    let delta_x: number = this.vec_F.x * Planet.render_multiplier;
+    let delta_y: number = this.vec_F.y * Planet.render_multiplier;
     line(this.x, this.y, this.x + delta_x, this.y + delta_y);
   }
 }
@@ -201,9 +201,11 @@ function checkCollision(): void {
         planeten[i].x - planeten[j].x,
         planeten[i].y - planeten[j].y,
       );
+
       let max_radius: number = planeten[i].radius > planeten[j].radius
         ? planeten[i].radius
         : planeten[j].radius;
+
       if (vec_i_j.betrag() <= max_radius) {
         let gesamtradius: number = Math.sqrt(
           planeten[i].radius * planeten[i].radius +
@@ -211,19 +213,21 @@ function checkCollision(): void {
         );
 
         let gesamtmasse: number = planeten[i].mass + planeten[j].mass;
+        let anteil_i: number = planeten[i].mass / gesamtmasse;
+        let anteil_j: number = planeten[j].mass / gesamtmasse;
 
-        let vec_v: Vektor = Vektor.getNullVektor();
-        vec_v.x += planeten[i].vec_v.x * (planeten[i].mass / gesamtmasse);
-        vec_v.x += planeten[j].vec_v.x * (planeten[j].mass / gesamtmasse);
-        vec_v.y += planeten[i].vec_v.y * (planeten[i].mass / gesamtmasse);
-        vec_v.y += planeten[j].vec_v.y * (planeten[j].mass / gesamtmasse);
+        // Diese Geschwindigkeit ist nicht realistisch, da gegen den Energieerhaltungssatz bzw.
+        // den ersten Hauptsatz der Thermodynamik
+        // verstoßen wird, allerdings würde das Einhalten eine noch unrealistischere Geschwindigkeit
+        // bedeuten, da bei einem Zusammentreffen von zwei Objekten
+        // nunmal viel Energie in Wärme und Reibung geht
+        let vec_v: Vektor = new Vektor(
+          planeten[i].vec_v.x * anteil_i + planeten[j].vec_v.x * anteil_j,
+          planeten[i].vec_v.y * anteil_i + planeten[j].vec_v.y * anteil_j,
+        );
 
-        let new_x: number = 0;
-        new_x += planeten[i].x * (planeten[i].mass / gesamtmasse);
-        new_x += planeten[j].x * (planeten[j].mass / gesamtmasse);
-        let new_y: number = 0;
-        new_y += planeten[i].y * (planeten[i].mass / gesamtmasse);
-        new_y += planeten[j].y * (planeten[j].mass / gesamtmasse);
+        let new_x: number = planeten[i].x * anteil_i + planeten[j].x * anteil_j;
+        let new_y: number = planeten[i].y * anteil_i + planeten[j].y * anteil_j;
 
         let newPlanet: Planet = new Planet(
           new_x,
