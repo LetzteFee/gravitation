@@ -14,7 +14,7 @@
         "noPropertyAccessFromIndexSignature": true
     },
     "files": [
-        "sketch.ts",
-        "p5.d.ts"
+        "src/sketch.ts",
+        "src/p5.d.ts"
     ]
 }
