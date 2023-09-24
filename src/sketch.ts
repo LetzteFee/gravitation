@@ -69,8 +69,8 @@ class Materie {
   public y: number;
   public vec_v: Vektor;
   protected vec_a: Vektor;
-  public readonly mass: number;
   protected vec_F: Vektor;
+  public readonly mass: number;
   constructor(x: number, y: number, mass: number, v: Vektor) {
     this.x = x;
     this.y = y;
